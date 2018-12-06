@@ -1,4 +1,15 @@
-
+#' Find the intercept of the tangent
+#'
+#' Description here
+#'
+#' @param f describe
+#' @param df describe
+#' @param x_pts describe
+#'
+#' Details here
+#'
+#' Examples here
+#'
 find_tangent_intercept = function(f, df, x_pts){
   # x_pts: points selected initially to find the tangent line, abscissae, T_k
   # z: intercept x values
@@ -6,10 +17,22 @@ find_tangent_intercept = function(f, df, x_pts){
   x1 = tail(x_pts, n=-1)
   z = (f(x1) - f(x0) - x1*df(x1) + x0*df(x0)) / (df(x0) - df(x1))
   assertthat::are_equal(length(x_pts), length(z) + 1)
-  return(z)   
+  return(z)
 }
 
-
+#' Calculate the upper bound
+#'
+#' Description here
+#'
+#' @param T_ describe
+#' @param z_pts describe
+#' @param func describe
+#' @param dfunc describe
+#'
+#' Details here
+#'
+#' Examples here
+#'
 get_upper <- function(T_, z_pts, func, dfunc) {
   return(
     function(x) {
@@ -18,9 +41,21 @@ get_upper <- function(T_, z_pts, func, dfunc) {
       return( func(T_[z_idx]) + (x - T_[z_idx])*dfunc(T_[z_idx]) )
     }
   )
-  
+
 }
 
+#' Calculate the lower bound
+#'
+#' Description here
+#'
+#' @param T_ describe
+#' @param func describe
+#' @param dfunc describe
+#'
+#' Details here
+#'
+#' Examples here
+#'
 get_lower <- function(T_, func, dfunc) {
   return(
     function(x) {
@@ -38,7 +73,7 @@ get_lower <- function(T_, func, dfunc) {
         }
       }
       return(res)
-      
+
       # numerator <- (T_current[x_idx + 2] - x)*f_(T_current[x_idx + 1]) + (x - T_current[x_idx + 1])*f_(T_current[x_idx + 2])
       # denominator <- T_current[x_idx + 2] - T_current[x_idx + 1]
       # return( numerator/denominator)
@@ -46,16 +81,30 @@ get_lower <- function(T_, func, dfunc) {
   )
 }
 
-
+#' Get updated functions
+#'
+#' Description here
+#'
+#' @param T_ describe
+#' @param z_pts describe
+#' @param func describe
+#' @param dfunc describe
+#' @param D_min describe
+#' @param D_max describe
+#'
+#' Details here
+#'
+#' Examples here
+#'
 get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
-  
+
   u_current <- get_upper(z_pts = z_pts, T_ = T_, func = func, dfunc = dfunc)
-  
+
   s_current <- function(x) {
     exp(u_current(x)) / integrate(function(x) exp(u_current(x)), lower = D_min, upper = D_max)$value
   }
   l_current <- get_lower(T_ = T_, func = func, dfunc = dfunc)
-  
+
   return(list("upper" = u_current,
               "lower" = l_current,
               "s" = s_current
@@ -63,7 +112,22 @@ get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
   )
 }
 
-
+#' Adaptive Rejection Sampler
+#'
+#' Description here
+#'
+#' @param n describe
+#' @param f describe
+#' @param dfunc describe
+#' @param T_start describe
+#' @param D_min describe
+#' @param D_max describe
+#' @param verbose describe
+#'
+#' Details here
+#'
+#' Examples here
+#'
 ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
   ## Need to work on this. When D_min or D_max = +- Inf problems occur.
   f_ <- function(x) {
@@ -77,7 +141,7 @@ ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
     }
     return(res)
   }
-  
+
   df_ <- function(x) {
     res <- c()
     for (i in seq(1, length(x))) {
@@ -91,26 +155,26 @@ ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
     }
     return(res)
   }
-  
+
   iteration <- 0
   samples <- c()
   T_current <- T_start
-  
+
   # tangent intersections points.
   z_points <- sort(c(D_min, find_tangent_intercept(f, dfunc, T_current), D_max))
-    
+
   helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = f_, dfunc = df_, D_min = D_min, D_max = D_max)
   u_current <- helper_funcs$upper
   s_current <- helper_funcs$s
   l_current <- helper_funcs$lower
-  
+
 
   while (length(samples) <= n) {
     # cat("T: ", T_current, "\n")
     # cat("samples: ", samples, "\n")
     integrals_s <- sapply(X = seq(1, length(z_points) -1), FUN = function(i) integrate(s_current, lower = z_points[i], upper = z_points[i + 1])$value)
     idx <- sample(seq(1, length(z_points) -1), size = 1, prob = integrals_s)
-    
+
     unnormalized_cdf_s <- function(x) {
       if (x <= z_points[idx]) {
         return(0)
@@ -120,13 +184,13 @@ ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
         integrate(s_current, lower = z_points[idx], upper = x)$value
       }
     }
-    
+
     quantile <- runif(1, min = 0, max = integrals_s[idx])
     x_star <- uniroot(f = function(x) unnormalized_cdf_s(x) - quantile, interval = c(z_points[idx], z_points[idx + 1]))$root # sample from s_current
-    
+
     assertthat::are_equal(x_star <= z_points[idx + 1] && x_star >= z_points[idx], TRUE)
     w <- runif(1)
-    
+
     ## 1st squeezing test.
     if ( w <= exp(l_current(x_star) - u_current(x_star)) ) {
       samples <- c(samples, x_star)
@@ -142,8 +206,8 @@ ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
 
       # Update step
       T_current <- sort(c(T_current, x_star))
-      iteration <- iteration + 1 
-      
+      iteration <- iteration + 1
+
       z_points <- sort(c(D_min, find_tangent_intercept(f, dfunc, T_current), D_max))
       helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = f_, dfunc = df_, D_min = D_min, D_max = D_max)
       u_current <- helper_funcs$upper
@@ -151,11 +215,11 @@ ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
       l_current <- helper_funcs$lower
     }
   }
-  
+
   return(samples)
 }
 
-  
+
 
 
 
