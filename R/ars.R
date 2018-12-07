@@ -1,61 +1,65 @@
-#' Find the intercept of the tangent
-#'
-#' Description here
-#'
-#' @param f describe
-#' @param df describe
-#' @param x_pts describe
-#'
-#' Details here
-#'
-#' Examples here
-#'
+## Loading libraries ----------------------------------------------------------
+library(devtools)
+library(roxygen2)
+
+## find_tangent_intercept -----------------------------------------------------
+#
+# This function finds the intercept of the tangent lines at the beginning
+#
+# Inputs:
+# f = a function provided by the user.
+# df = the derivative of the function.
+# x_pts = points selected initially to find the tangent line.
+#
+# Outputs:
+# z = the intercepts of the tangent lines
+#
 find_tangent_intercept = function(f, df, x_pts){
-  # x_pts: points selected initially to find the tangent line, abscissae, T_k
-  # z: intercept x values
-  x0 = head(x_pts, n=-1)
-  x1 = tail(x_pts, n=-1)
-  z = (f(x1) - f(x0) - x1*df(x1) + x0*df(x0)) / (df(x0) - df(x1))
+  x0 = head(x_pts, n = -1)
+  x1 = tail(x_pts, n = -1)
+  z = (f(x1) - f(x0) - x1 * df(x1) + x0 * df(x0)) / (df(x0) - df(x1))
+
   assertthat::are_equal(length(x_pts), length(z) + 1)
+
   return(z)
 }
 
-#' Calculate the upper bound
-#'
-#' Description here
-#'
-#' @param T_ describe
-#' @param z_pts describe
-#' @param func describe
-#' @param dfunc describe
-#'
-#' Details here
-#'
-#' Examples here
-#'
+## get_upper ------------------------------------------------------------------
+#
+# This function calculates the upper bound
+#
+# Inputs:
+# T_ = the abcissa of the function.
+# z_pts = the intercepts of the tangent line.
+# func = a function provided by the user.
+# dfunc = the derivative of the function.
+#
+# Output:
+# the upper bound.
+#
 get_upper <- function(T_, z_pts, func, dfunc) {
   return(
     function(x) {
       #cat(z_pts, "\n \n")
       z_idx <- findInterval(x = x, vec = z_pts)
-      return( func(T_[z_idx]) + (x - T_[z_idx])*dfunc(T_[z_idx]) )
+      return(func(T_[z_idx]) + (x - T_[z_idx]) * dfunc(T_[z_idx]))
     }
   )
 
 }
 
-#' Calculate the lower bound
-#'
-#' Description here
-#'
-#' @param T_ describe
-#' @param func describe
-#' @param dfunc describe
-#'
-#' Details here
-#'
-#' Examples here
-#'
+## get_lower ------------------------------------------------------------------
+#
+#
+#
+# Inputs:
+# T_ = the abcissa of the function.
+# func = a function provided by the user.
+# dfunc = the derivative of the function.
+#
+# Output:
+# the lower bound.
+#
 get_lower <- function(T_, func, dfunc) {
   return(
     function(x) {
@@ -67,9 +71,9 @@ get_lower <- function(T_, func, dfunc) {
         } else if (x_idx[i] == 0 || x_idx[i] == length(T_)) {
           res[i] <- -Inf
         } else {
-          numerator <- (T_[x_idx[i] + 1] - x[i])*func(T_[x_idx[i]]) + (x[i] - T_[x_idx[i]])*func(T_[x_idx[i] + 1])
+          numerator <- (T_[x_idx[i] + 1] - x[i]) * func(T_[x_idx[i]]) + (x[i] - T_[x_idx[i]]) * func(T_[x_idx[i] + 1])
           denominator <- T_[x_idx[i] + 1] - T_[x_idx[i]]
-          res[i] <- numerator/denominator
+          res[i] <- numerator / denominator
         }
       }
       return(res)
@@ -81,21 +85,22 @@ get_lower <- function(T_, func, dfunc) {
   )
 }
 
-#' Get updated functions
-#'
-#' Description here
-#'
-#' @param T_ describe
-#' @param z_pts describe
-#' @param func describe
-#' @param dfunc describe
-#' @param D_min describe
-#' @param D_max describe
-#'
-#' Details here
-#'
-#' Examples here
-#'
+## Get updated functions ------------------------------------------------------
+#
+# This function updates the functions
+#
+# Inputs:
+# T_ = the abcissa of the function.
+# z_pts = the intercepts of the tangent line.
+# func = a function provided by the user.
+# dfunc = the derivative of the function.
+# D_min = the minimum boundary limit.
+# D_max = the maximimum boundary limit of the distribution.
+#
+# Outputs:
+# An updated upper bound, lower bound, and new starting points for the next
+# iteration of the function.
+#
 get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
 
   u_current <- get_upper(z_pts = z_pts, T_ = T_, func = func, dfunc = dfunc)
@@ -112,6 +117,9 @@ get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
   )
 }
 
+
+
+
 #' Adaptive Rejection Sampler
 #'
 #' Description here
@@ -124,9 +132,10 @@ get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
 #' @param D_max describe
 #' @param verbose describe
 #'
-#' Details here
+#' @details
 #'
-#' Examples here
+#'
+#' @examples
 #'
 ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
   ## Need to work on this. When D_min or D_max = +- Inf problems occur.

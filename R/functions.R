@@ -1,7 +1,7 @@
 
 
 
-
+library(devtools)
 library(roxygen2)
 library(pracma)
 
@@ -34,10 +34,10 @@ h_func = function(y){
 #'
 #'
 derive_h = function(y){
-  params.r - params.m * exp(y) / (1 + exp(y)) - (y-params.mu)/params.sig2
+  params.r - params.m * exp(y) / (1 + exp(y)) - (y - params.mu)/params.sig2
 }
 x = seq(-6, 6, length.out = 100)
-plot(x, h(x), type="l")
+plot(x, h(x), type = "l")
 
 
 #' Find the x values of the intercept
@@ -57,8 +57,8 @@ plot(x, h(x), type="l")
 #'
 find_intercept = function(x_pts){
 
-  x0 = head(x_pts, n=-1)
-  x1 = tail(x_pts, n=-1)
+  x0 = head(x_pts, n = -1)
+  x1 = tail(x_pts, n = -1)
   z = (h(x1) - h(x0) - x1 * dh(x1) + x0 * dh(x0)) / (dh(x0) - dh(x1))
   return(z)
 }
@@ -99,17 +99,17 @@ find_u = function(x, x_pts) {
   # loop through all pieces, for each piece, calc the corresponding y for each x
   for(i in 1:(length(all_pts) - 1)) {
     xp = x[x_idx == i]
-    uu = h(x_pts[i]) + (xp - x_pts[i]) *dh(x_pts[i])
+    uu = h(x_pts[i]) + (xp - x_pts[i]) * dh(x_pts[i])
     u[x_idx == i] = uu
     # find the area under each piece
-    norm_const[i] = integrate(function(z) h(x_pts[i]) + (z - x_pts[i]) * dh(x_pts[i]), lower = all_pts[i], upper = all_pts[i+1])[[1]]
+    norm_const[i] = integrate(function(z) h(x_pts[i]) + (z - x_pts[i]) * dh(x_pts[i]), lower = all_pts[i], upper = all_pts[i + 1])[[1]]
   }
   return(list(u = u, norm_const = norm_const))
 }
 
 
 
-#' Find S.
+#' Find S
 #'
 #' This function finds s.
 #'
@@ -122,13 +122,13 @@ find_u = function(x, x_pts) {
 #' find_s(c(-1, 0, 1), a)
 #'
 find_s = function(x, x_pts){
-  s = exp(find_u(x, x_pts)$u)/sum(find_u(x, x_pts)$norm_const)
+  s = exp(find_u(x, x_pts)$u) / sum(find_u(x, x_pts)$norm_const)
   return(s)
 }
 
 
 
-#' Calculate the lower bound.
+#' Calculate the lower bound
 #'
 #' This function calculates the lower bound.
 #'
@@ -155,7 +155,7 @@ find_l = function(x, x_pts){
   l = c()
   for(i in 1:(length(x_pts)-1)){
     xp = x[x_idx == i]
-    ll = ((x_pts[i+1] - xp)*h(x_pts[i]) + (xp-x_pts[i])*h(x_pts[i+1])) / (x_pts[i+1]-x_pts[i])
+    ll = ((x_pts[i + 1] - xp) * h(x_pts[i]) + (xp - x_pts[i]) * h(x_pts[i + 1])) / (x_pts[i + 1] - x_pts[i])
     l[x_idx == i] = ll
   }
   return(l)
