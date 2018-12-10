@@ -87,7 +87,7 @@ get_lower <- function(T_, func, dfunc) {
 
 ## Get updated functions ------------------------------------------------------
 #
-# This function updates the functions
+# This function updates the functions as neded when ARS needs new inputs.
 #
 # Inputs:
 # T_ = the abcissa of the function.
@@ -122,20 +122,44 @@ get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
 
 #' Adaptive Rejection Sampler
 #'
-#' Description here
+#' Sample points from a distribution using an adaptive rejection sampler.
 #'
-#' @param n describe
-#' @param f describe
-#' @param dfunc describe
-#' @param T_start describe
-#' @param D_min describe
-#' @param D_max describe
-#' @param verbose describe
+#' @param n the number of samples that you'd like taken from the distribution.
+#' @param f the function used to determine the distribution from which you'll
+#'   sample
+#' @param dfunc the derivative of the function.
+#' @param T_start The starting points to begin ARS.
+#' @param D_min the minimum boundary limit of the distribution.
+#' @param D_max the maximum boundary limit of the distribution.
+#' @param verbose Whether you want R to print out the process as it goes through
+#'   ARS. This can be useful for longer computations.
 #'
-#' @details
+#' @details Adaptive rejection sampling can be beneficial when sampling from
+#' certain distributions by reducing the number of evaluations that must occur.
+#' It reduces the evaluations by assuming log-concavity for any input function,
+#' and because it doesn't need to update for new envelope and squeeze functions
+#' every iteration. ARS is particularly useful in Gibbs Sampling, where
+#' calculations are complicated but usually log-concave.
 #'
 #'
 #' @examples
+#' # testing on normal distribution
+#' h = function(y) {
+#' return(-log(2 * pi * sigma ^ 2) / 2 - (y - mu) ^ 2 / (2 * sigma ^ 2))
+#' }
+#'
+#' # derivative of h
+#' dh = function(y){
+#'   return(- (y - mu)/sigma^2)
+#' }
+#'
+#' res_samples <- ars(n = 1000, f = h, dfunc = dh, T_start = c(-3, 0, 3), D_min
+#' = -10, D_max = 30)
+#'
+#'
+#' # Check variance and mean
+#' mean(res_samples)
+#' var(res_samples)
 #'
 ars <- function(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE) {
   ## Need to work on this. When D_min or D_max = +- Inf problems occur.
@@ -254,17 +278,3 @@ res_samples <- ars(n = 10, f = h, dfunc = dh, T_start = c(-3, 0, 3), D_min = -20
 ## Test with normal distribution
 mu = 10
 sigma = 2
-
-h = function(y) {
-  return(-log(2*pi*sigma^2)/2 - (y - mu)^2/ (2*sigma^2))
-}
-## derivative of h
-dh = function(y){
-  return(- (y - mu)/sigma^2)
-}
-
-res_samples <- ars(n = 1000, f = h, dfunc = dh, T_start = c(-3, 0, 3), D_min = -10, D_max = 30)
-
-# Check variance and mean
-mean(res_samples)
-var(res_samples)
