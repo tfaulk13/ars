@@ -1,12 +1,14 @@
-Package: ars2
+Package: ars
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Title: Adaptive Rejection Sampler
+Version: 1.0.0
+Depends: R, stats
+Imports: pracma, dplyr
+Author: Dodo Qian, Hatim Ezbakhe, Naomi Wilcox, and Todd Faulkenberry
+Maintainer: Todd Faulkenberry <todd_faulkenberry@berkeley.edu>
+Description: This package lets you run adaptive rejection sampling on a distribution of your choice. It uses a series of functions to run through the initialization, sampling, and updating steps of ARS. The functions also perform necessary duties of any ARS process, e.g. testing for log-concavity. An informative slide deck on ARS can be found here: http://www2.stat.duke.edu/~cnk/Links/slides.pdf.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
+
