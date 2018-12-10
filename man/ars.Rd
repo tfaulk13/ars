@@ -4,7 +4,7 @@
 \alias{ars}
 \title{Adaptive Rejection Sampler}
 \usage{
-ars(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE)
+ars(n, f, dfunc, D_min, D_max, verbose = FALSE)
 }
 \arguments{
 \item{n}{the number of samples that you'd like taken from the distribution.}
@@ -13,8 +13,6 @@ ars(n, f, dfunc, T_start, D_min, D_max, verbose = FALSE)
 sample}
 
 \item{dfunc}{the derivative of the function.}
-
-\item{T_start}{The starting points to begin ARS.}
 
 \item{D_min}{the minimum boundary limit of the distribution.}
 
@@ -45,8 +43,7 @@ dh = function(y){
   return(- (y - mu)/sigma^2)
 }
 
-res_samples <- ars(n = 1000, f = h, dfunc = dh, T_start = c(-3, 0, 3), D_min
-= -10, D_max = 30)
+res_samples <- ars(n = 1000, f = h, dfunc = dh, D_min = -10, D_max = 30)
 
 
 # Check variance and mean
