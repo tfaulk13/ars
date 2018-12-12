@@ -41,7 +41,7 @@ ars <- function(n, f, starting_points, dfunc, interval) {
     dfunc <- function(x) fderiv(f, x)/(f(x) + .Machine$double.eps)
   }
 
-  #Restrict the density to a smaller interval containing the overall information of the density.
+  # Restrict the density to a smaller interval containing the overall information of the density.
   if (missing(interval)) {
     support_limits <- set_support_limit(f)
     D_min <- support_limits$D_min
@@ -52,7 +52,7 @@ ars <- function(n, f, starting_points, dfunc, interval) {
     D_min <- interval[1]
     D_max <- interval[2]
     if (log_f(D_min) == -Inf || log_f(D_max) == -Inf) {
-      stop("Pleasee provide a more compact interval.")
+      stop("Please provide a more compact interval.")
     }
   }
 

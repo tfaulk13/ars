@@ -256,6 +256,6 @@ set_support_limit <- function (f) {
   D_min <- rootSolve::uniroot.all(f = function(x) cdf(x) - lower_quantile, lower = min, upper =  max)[1] - safety
   D_max <- rootSolve::uniroot.all(f = function(x) cdf(x) - upper_quantile, lower = min, upper =  max)[1] + safety
 
-  return(list("D_min" = D_min,
-              "D_max" = D_max))
+  return(list("D_min" = ifelse(is.na(D_min), -100, D_min),
+              "D_max" = ifelse(is.na(D_max), -100, D_max)))
 }
