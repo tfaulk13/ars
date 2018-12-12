@@ -2,13 +2,12 @@ Package: ars
 Type: Package
 Title: Adaptive Rejection Sampler
 Version: 1.0.0
-Depends: R, stats
+Depends: R (>= 3.1.0)
 Imports: pracma, dplyr, testthat, assertthat, rootSolve
 Author: Dodo Qian, Hatim Ezbakhe, Naomi Wilcox, and Todd Faulkenberry
 Maintainer: Todd Faulkenberry <todd_faulkenberry@berkeley.edu>
 Description: This package lets you run adaptive rejection sampling on a distribution of your choice. It uses a series of functions to run through the initialization, sampling, and updating steps of ARS. The functions also perform necessary duties of any ARS process, e.g. testing for log-concavity. An informative slide deck on ARS can be found here: http://www2.stat.duke.edu/~cnk/Links/slides.pdf.
-License: What license is it under?
+License: GPL-2
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
-Suggests: testthat

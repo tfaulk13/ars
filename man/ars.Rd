@@ -4,7 +4,7 @@
 \alias{ars}
 \title{Adaptive Rejection Sampler}
 \usage{
-ars(n, f, dfunc, D_min, D_max, verbose = FALSE)
+ars(n, f, starting_points, dfunc, interval)
 }
 \arguments{
 \item{n}{the number of samples that you'd like taken from the distribution.}
@@ -12,17 +12,15 @@ ars(n, f, dfunc, D_min, D_max, verbose = FALSE)
 \item{f}{the function used to determine the distribution from which you'll
 sample}
 
+\item{starting_points}{the starting points used for the initialization step of the ars algorithm.}
+
 \item{dfunc}{the derivative of the function.}
 
-\item{D_min}{the minimum boundary limit of the distribution.}
-
-\item{D_max}{the maximum boundary limit of the distribution.}
-
-\item{verbose}{Whether you want R to print out the process as it goes through
-ARS. This can be useful for longer computations.}
+\item{interval}{the boundary limit of the distribution.}
 }
 \description{
-Sample points from a distribution using an adaptive rejection sampler.
+Sample points from a distribution using an adaptive rejection sampler. Based upon:
+Gilks, W., & Wild, P. (1992). Adaptive Rejection Sampling for Gibbs Sampling. Journal of the Royal Statistical Society.
 }
 \details{
 Adaptive rejection sampling can be beneficial when sampling from
@@ -34,20 +32,6 @@ calculations are complicated but usually log-concave.
 }
 \examples{
 # testing on normal distribution
-h = function(y) {
-return(-log(2 * pi * sigma ^ 2) / 2 - (y - mu) ^ 2 / (2 * sigma ^ 2))
-}
-
-# derivative of h
-dh = function(y){
-  return(- (y - mu)/sigma^2)
-}
-
-res_samples <- ars(n = 1000, f = h, dfunc = dh, D_min = -10, D_max = 30)
-
-
-# Check variance and mean
-mean(res_samples)
-var(res_samples)
+res_samples <- ars(n = 1000, f = dnorm)
 
 }
