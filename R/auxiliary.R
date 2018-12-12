@@ -1,6 +1,6 @@
 ## find_init_points -----------------------------------------------------------
 #
-# This function finds the initial starting points for ARS
+# This function finds the initial starting points for ARS. Used when the user does give it as an input
 #
 # Inputs:
 # f = a function provided by the user.
@@ -58,7 +58,7 @@ find_tangent_intercept = function(f, df, x_pts){
 # dfunc = the derivative of the function.
 #
 # Output:
-# the upper bound.
+# the upper bound function.
 #
 get_upper <- function(T_, z_pts, func, dfunc) {
   return(
@@ -80,7 +80,7 @@ get_upper <- function(T_, z_pts, func, dfunc) {
 # dfunc = the derivative of the function.
 #
 # Output:
-# the lower bound.
+# the lower bound function.
 #
 get_lower <- function(T_, func, dfunc) {
   return(
@@ -99,10 +99,6 @@ get_lower <- function(T_, func, dfunc) {
         }
       }
       return(res)
-
-      # numerator <- (T_current[x_idx + 2] - x)*f_(T_current[x_idx + 1]) + (x - T_current[x_idx + 1])*f_(T_current[x_idx + 2])
-      # denominator <- T_current[x_idx + 2] - T_current[x_idx + 1]
-      # return( numerator/denominator)
     }
   )
 }
@@ -151,15 +147,17 @@ get_updated_functions <- function(T_, z_pts, func, dfunc, D_min, D_max) {
 # Inputs:
 # s_function = the density to sample from.
 # z_pts = the piecewise subdivisions of s_function.
-# s_integrals =
+# s_integrals = integral of s_function over its subdivisions.
 # Outputs:
-# A randomly generated valuee from the s_function density distribution.
+# A randomly generated value from the s_function density distribution.
 #
 sample_x_star <- function(s_function, z_pts, s_integrals) {
   if (missing(s_integrals)) {
-    # Apply the closed form solution of the integral instead ?
+    # Applying the closed form solution of the integral instead, computed from the Adaptive Rejection Sampling paper would be quicker, but less explicit.
     s_integrals <- sapply(X = seq(1, length(z_pts) -1), FUN = function(i) integrate(s_function, lower = z_pts[i], upper = z_pts[i + 1])$value)
   }
+
+  # Pick the interval of the piecewise exponential distribution we are sampling from.
   idx <- sample(seq(1, length(z_pts) -1), size = 1, prob = s_integrals)
 
   unnormalized_cdf_s <- function(x) {
@@ -181,74 +179,24 @@ sample_x_star <- function(s_function, z_pts, s_integrals) {
 }
 
 
-## set_support_limit ------------------------------------------------------
+## get_support_limit ------------------------------------------------------
 #
-# This function samples an element from the piecewise exponential density distribution s_function.
+# This function defines a domain for the density function so that the main mass of the distribution is within the domain bounds.
 #
 # Inputs:
-# s_function = the density to sample from.
-# z_pts = the piecewise subdivisions of s_function.
-# s_integrals =
+# f = the density we are trying to define a domain for.
 # Outputs:
-# A randomly generated valuee from the s_function density distribution.
-#
-# set_support_limit <- function (f, dfunc, D_min = -Inf, D_max = Inf) {
-#   clip_value <- -20
-#   eps <- 1E-3
-#
-#   while (f(D_min) < clip_value) {
-#     # Newton method adaptation.
-#     D_min <- D_min - (f(D_min) - clip_value)/((dfunc(D_min)) + eps)
-#   }
-#
-#   while (f(D_max) < clip_value) {
-#     D_max <- D_max + (max(f(D_max), -1E6) - clip_value)/((dfunc(D_max)) + eps)
-#   }
-#
-#   # D_min <- -1E8
-#   # while (f(D_min) < clip_value) {
-#   #   D_min <- D_min - (f(D_min) - clip_value)/(abs(dfunc(D_min)) + eps)
-#   #
-#
-#   # roots <- rootSolve::uniroot.alluniroot(function(x) f(x) - clip_value, lower = D_min, upper = max)
-#   # D_max <- uniroot(function(x) f(x) - clip_value, lower = max, upper = D_max)
-#
-#   # # We consider that if f(x) is inferior than clip_value,
-#   # # then there's no chance of sampling x, as the density at x would correspond to exp(-20).
-#   # while (f(D_min) - clip_value > 0) {
-#   #   # Newton method adaptation.
-#   #   D_min_update <- D_min - (f(D_min) - clip_value)/(abs(dfunc(D_min)) + eps)
-#   #   if (f(D_min_update) == -Inf) {
-#   #     break
-#   #   }
-#   #   D_min <- D_min_update
-#   # }
-#   #
-#   #
-#   # D_max <- 0
-#   # while (f(D_max) > clip_value) {
-#   #   D_max_update <- D_max + (f(D_max) - clip_value)/(abs(dfunc(D_max)) + eps)
-#   #   if (f(D_max_update) == -Inf) {
-#   #     break
-#   #   }
-#   #   D_max <- D_max_update
-#   # }
-#   #
-#
-#   return(list("D_min" = D_min,
-#               "D_max" = D_max))
-# }
-
-set_support_limit <- function (f) {
+# A list containing two elements, the minimum of the domain, and its maximum.
+get_support_limit <- function (f) {
   min <- -1E3
   max <- 1E3
-  lower_quantile <- 1E-6
-  upper_quantile <- 1 - 1E-6
+  lower_quantile <- log(1E-6)
+  upper_quantile <- log(1 - 1E-6)
   cdf <- function(x) {
     norm <- integrate(f, lower = min, upper = max)$value
     res <- vector(length = length(x))
     for (i in seq(1, length(x))) {
-      res[i] <- integrate(f, lower = min, upper = x[i])$value
+      res[i] <- log(integrate(f, lower = min, upper = x[i])$value) - log(norm)
     }
     return(res)
   }

@@ -1,15 +1,14 @@
 #' Adaptive Rejection Sampler
 #'
-#' Sample points from a distribution using an adaptive rejection sampler.
+#' Sample points from a distribution using an adaptive rejection sampler. Based upon:
+#' Gilks, W., & Wild, P. (1992). Adaptive Rejection Sampling for Gibbs Sampling. Journal of the Royal Statistical Society.
 #'
 #' @param n the number of samples that you'd like taken from the distribution.
 #' @param f the function used to determine the distribution from which you'll
 #'   sample
 #' @param dfunc the derivative of the function.
-#' @param D_min the minimum boundary limit of the distribution.
-#' @param D_max the maximum boundary limit of the distribution.
-#' @param verbose Whether you want R to print out the process as it goes through
-#'   ARS. This can be useful for longer computations.
+#' @param interval the boundary limit of the distribution.
+#' @param starting_points the starting points used for the initialization step of the ars algorithm.
 #'
 #' @details Adaptive rejection sampling can be beneficial when sampling from
 #' certain distributions by reducing the number of evaluations that must occur.
@@ -24,9 +23,6 @@
 #' res_samples <- ars(n = 1000, f = dnorm)
 #'
 #'
-#' # Check variance and mean
-#' mean(res_samples)
-#' var(res_samples)
 #'
 ars <- function(n, f, starting_points, dfunc, interval) {
 
@@ -43,12 +39,13 @@ ars <- function(n, f, starting_points, dfunc, interval) {
 
   # Restrict the density to a smaller interval containing the overall information of the density.
   if (missing(interval)) {
-    support_limits <- set_support_limit(f)
+    support_limits <- get_support_limit(f)
     D_min <- support_limits$D_min
     D_max <- support_limits$D_max
   } else {
     assertthat::are_equal(length(interval), 2)
     testthat::expect_type(interval, "double")
+    testthat::expect_equal(length(interval), 2)
     D_min <- interval[1]
     D_max <- interval[2]
     if (log_f(D_min) == -Inf || log_f(D_max) == -Inf) {
@@ -56,27 +53,6 @@ ars <- function(n, f, starting_points, dfunc, interval) {
     }
   }
 
-
-
-
-
-  # Restrict the density to a smaller interval containing the overall information of the density.
-  # if (missing(interval)) {
-  #   support_limits <- set_support_limit(log_f, dfunc, D_min = -1E8, D_max = 1E8)
-  #   D_min <- support_limits$D_min
-  #   D_max <- support_limits$D_max
-  # } else {
-  #   assertthat::are_equal(length(interval), 2)
-  #   testthat::expect_type(interval, "double")
-  #   D_min <- interval[1]
-  #   D_max <- interval[2]
-  #   if (log_f(D_min) == -Inf || log_f(D_max) == -Inf) {
-  #     stop("Pleasee provide a more compact interval.")
-  #   }
-  # }
-
-
-  iteration <- 0
   samples <- c()
 
   # Come up with starting points if not given.
@@ -87,6 +63,8 @@ ars <- function(n, f, starting_points, dfunc, interval) {
       stop("The 'starting_points' input should be a vector of abscissae.")
     if (length(starting_points) < 2)
       stop("The 'starting_points' input should contain at least 2 elements.")
+    if (Inf %in% abs(log_f(starting_points)))
+      stop("Please give starting points where the density can be evaluated with a minimum precision.")
     T_current <- starting_points
   }
 
@@ -101,6 +79,7 @@ ars <- function(n, f, starting_points, dfunc, interval) {
   integrals_s <- helper_funcs$s_integrals
 
   while (length(samples) <= n) {
+    # sample an element from s_current.
     x_star <- sample_x_star(s_function = s_current, s_integrals = integrals_s, z_pts = z_points)
 
     w <- runif(1)
@@ -111,6 +90,7 @@ ars <- function(n, f, starting_points, dfunc, interval) {
     if ( w <= exp(-diff_upper_lower) ) {
       samples <- c(samples, x_star)
     } else {
+      # 2nd squeezing test
       diff_upper_f <- u_current(x_star) - log_f(x_star)
       if(diff_upper_f < -1E-5) stop("Function is not log concave. Adaptive rejection sampling won't give a proper sample for this distribution.")
       if (w <= exp(-diff_upper_f)) {
@@ -119,7 +99,6 @@ ars <- function(n, f, starting_points, dfunc, interval) {
 
       # Update step.
       T_current <- sort(c(T_current, x_star))
-      iteration <- iteration + 1
 
       z_points <- (sort(c(D_min, find_tangent_intercept(log_f, dfunc, T_current), D_max)))
       helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = log_f, dfunc = dfunc, D_min = D_min, D_max = D_max)
