@@ -22,7 +22,14 @@
 #' # testing on normal distribution
 #' res_samples <- ars(n = 1000, f = dnorm)
 #'
+#' # specifying a domain interval
+#' res_samples <- ars(n, function(x) dnorm(x, mean = 3, sd = 5), interval = c(-20, 25))
 #'
+#'# specifying starting points (check the paper in references for more details)
+#' res_samples <- ars(n, dunif, interval = c(0,1), starting_points = c(0.2, 0.8))
+#'
+#' @references
+#' Gilks, W., & Wild, P. (1992). Adaptive Rejection Sampling for Gibbs Sampling. Journal of the Royal Statistical Society.
 #'
 ars <- function(n, f, starting_points, dfunc, interval) {
 
@@ -46,10 +53,10 @@ ars <- function(n, f, starting_points, dfunc, interval) {
     assertthat::are_equal(length(interval), 2)
     testthat::expect_type(interval, "double")
     testthat::expect_equal(length(interval), 2)
-    D_min <- interval[1]
-    D_max <- interval[2]
+    D_min <- interval[1] + .Machine$double.eps^0.25
+    D_max <- interval[2] - .Machine$double.eps^0.25
     if (log_f(D_min) == -Inf || log_f(D_max) == -Inf) {
-      stop("Please provide a more compact interval.")
+      stop("Please provide a more compact interval, where the density does not evaluate to 0.")
     }
   }
 
@@ -78,7 +85,7 @@ ars <- function(n, f, starting_points, dfunc, interval) {
   l_current <- helper_funcs$lower
   integrals_s <- helper_funcs$s_integrals
 
-  while (length(samples) <= n) {
+  while (length(samples) < n) {
     # sample an element from s_current.
     x_star <- sample_x_star(s_function = s_current, s_integrals = integrals_s, z_pts = z_points)
 

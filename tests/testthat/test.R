@@ -13,7 +13,7 @@ test_that("tangent lines intercept at zero for quadratic function", {
   expect_equal(find_tangent_intercept(f, df, x_pts), c(0))
 })
 
-# Test 1.5: Check fo get_support_limit
+# Test 1.5: Check for get_support_limit
 test_that("get_support_limit does give a domain containing the mass of the distribution, for different distributions", {
   quantile <- 1E-6
 
@@ -34,8 +34,11 @@ context("Test that ars works for various input functions")
 # Test 2: logistic distribution
 test_that("ars works for logistic distribution, not specifying a domain", {
   n <- 1000
-  res_samples <- ars(n, dlogis)
-  true_samples <- rlogis(n)
+  nb_iterations <- 3
+
+  # Running the ars algorithm several times to change the starting points and the abscissae divisions.
+  res_samples <- as.vector(replicate(nb_iterations, ars(n, dlogis)))
+  true_samples <- rlogis(nb_iterations*n)
 
   p_val <- ks.test(res_samples, true_samples)$p.value
   expect_gt(p_val, 0.05)
@@ -51,8 +54,10 @@ test_that("ars works for logistic distribution, not specifying a domain", {
 # Test 3: exponential distribution
 test_that("ars works for exponential distribution, while specifying an appropriate domain", {
   n <- 1000
-  res_samples <- ars(n, function(x) dexp(x, rate = 2), interval = c(0,30))
-  true_samples <- rexp(n, rate = 2)
+  nb_iterations <- 3
+
+  res_samples <- as.vector(replicate(nb_iterations, ars(n, function(x) dexp(x, rate = 2), interval = c(0,30))))
+  true_samples <- rexp(nb_iterations*n, rate = 2)
 
   p_val <- ks.test(res_samples, true_samples)$p.value
   expect_gt(p_val, 0.05)
@@ -68,11 +73,13 @@ test_that("ars works for exponential distribution, while specifying an appropria
 # Test 4: normal distribution
 test_that("ars works for normal distribution", {
   n <- 1000
+  nb_iterations <- 3
+
   mu <- 2
   sd <- 5
 
-  res_samples <- ars(n, function(x) dnorm(x, mean = mu, sd = sd))
-  true_samples <- rnorm(n, mean = mu, sd = sd)
+  res_samples <- as.vector(replicate(nb_iterations, ars(n, function(x) dnorm(x, mean = mu, sd = sd))))
+  true_samples <- rnorm(nb_iterations*n, mean = mu, sd = sd)
 
   p_val <- ks.test(res_samples, true_samples)$p.value
   expect_gt(p_val, 0.05)
@@ -88,11 +95,13 @@ test_that("ars works for normal distribution", {
 # Test 5: normal distribution with low variance should give accurate mean
 test_that("ars works for peaked normal distribution", {
   n <- 1000
+  nb_iterations <- 3
+
   mu <- 2
   sd <- 0.01
 
-  res_samples <- ars(n, function(x) dnorm(x, mean = mu, sd = sd), interval = c(1.8, 2.2))
-  true_samples <- rnorm(n, mean = mu, sd = sd)
+  res_samples <- as.vector(replicate(nb_iterations, ars(n, function(x) dnorm(x, mean = mu, sd = sd), interval = c(1.8, 2.2))))
+  true_samples <- rnorm(nb_iterations*n, mean = mu, sd = sd)
 
   p_val <- ks.test(res_samples, true_samples)$p.value
   expect_gt(p_val, 0.05)
@@ -109,9 +118,10 @@ test_that("ars works for peaked normal distribution", {
 # Test 6: normal distribution with unaccurate domain gives wrong result
 test_that("ars works for peaked normal distribution with unaccurate domain gives wrong result", {
   n <- 1000
+  nb_iterations <- 3
 
-  res_samples <- ars(n, dnorm, interval = c(2, 10))
-  true_samples <- rnorm(n)
+  res_samples <- as.vector(replicate(nb_iterations, ars(n, dnorm, interval = c(2, 10))))
+  true_samples <- rnorm(nb_iterations*n)
 
   p_val <- ks.test(res_samples, true_samples)$p.value
   expect_lt(p_val, 0.05)
@@ -128,9 +138,10 @@ test_that("ars works for peaked normal distribution with unaccurate domain gives
 # Test 7: unifom distribution
 test_that("ars works for uniform distribution with appropriate given starting_points", {
   n <- 1000
+  nb_iterations <- 3
 
-  res_samples <- ars(n, function(x) dunif(x), interval = c(0,1), starting_points = c(0.2, 0.8))
-  true_samples <- runif(n)
+  res_samples <- as.vector(replicate(nb_iterations, ars(n, function(x) dunif(x), interval = c(0,1), starting_points = c(0.2, 0.8))))
+  true_samples <- runif(nb_iterations*n)
 
   p_val <- ks.test(res_samples, true_samples)$p.value
   expect_gt(p_val, 0.05)
@@ -143,7 +154,35 @@ test_that("ars works for uniform distribution with appropriate given starting_po
   expect_lt(var_diff, precision)
 })
 
-# Test 7: unifom distribution with wrong starting points returns error
+# Test 8: beta distribution
+test_that("ars works for beta distribution with a given domain", {
+  n <- 1000
+  nb_iterations <- 3
+
+  res_samples <- as.vector(replicate(nb_iterations,
+                                     ars(n, function(x) dbeta(x, shape1 = 1, shape2 = 2), interval = c(0, 1))
+                                     ))
+  true_samples <- rbeta(nb_iterations*n, shape1 = 1, shape2 = 2)
+
+  p_val <- ks.test(res_samples, true_samples)$p.value
+  expect_gt(p_val, 0.05)
+
+  mean_diff <- abs(mean(res_samples) - mean(true_samples))
+  var_diff <- abs(var(res_samples) - var(true_samples))
+
+  precision <- 0.2
+  expect_lt(mean_diff, precision)
+  expect_lt(var_diff, precision)
+})
+
+# Test 9: beta distribution
+test_that("ars for beta distribution without a given domain asks the user to input a compact domain", {
+  n <- 1000
+
+  expect_error(ars(n, function(x) dbeta(x, shape1 = 1, shape2 = 2)), "The density integrates to 0 because of the 'integrate' function behavior on a large interval for a condensed function.\n                 Give a small interval as input to the ars function and try again.")
+})
+
+# Test 10: unifom distribution with wrong starting points returns error
 test_that("ars returns error for uniform distribution with unappropriate given starting_points", {
   n <- 1000
 
@@ -153,10 +192,11 @@ test_that("ars returns error for uniform distribution with unappropriate given s
 ## Log Concavity
 context("Tests for Log Concavity")
 
-# Test 8: running ars on non log-concave functions returns error
+# Test 11: running ars on non log-concave functions returns error
 test_that("ars returns error for non log-concave t-distribution", {
   n <- 1000
 
+  expect_error(ars(n, function(x) dcauchy(x)), "Function is not log concave. Adaptive rejection sampling won't give a proper sample for this distribution.")
   expect_error(ars(n, function(x) dt(x, df = 2)), "Function is not log concave. Adaptive rejection sampling won't give a proper sample for this distribution.")
 })
 
@@ -164,7 +204,7 @@ test_that("ars returns error for non log-concave t-distribution", {
 ## Inputs
 context("Testing inputs handling")
 
-# Test 9: returns error for wrong inputs
+# Test 12: returns error for wrong inputs
 test_that("ars returns error for wrong inputs", {
   n <- 1000
 

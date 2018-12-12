@@ -194,6 +194,10 @@ get_support_limit <- function (f) {
   upper_quantile <- log(1 - 1E-6)
   cdf <- function(x) {
     norm <- integrate(f, lower = min, upper = max)$value
+    if (norm == 0) {
+      stop("The density integrates to 0 because of the 'integrate' function behavior on a large interval for a condensed function.
+             Give a small interval as input to the ars function and try again.")
+    }
     res <- vector(length = length(x))
     for (i in seq(1, length(x))) {
       res[i] <- log(integrate(f, lower = min, upper = x[i])$value) - log(norm)
@@ -205,5 +209,5 @@ get_support_limit <- function (f) {
   D_max <- rootSolve::uniroot.all(f = function(x) cdf(x) - upper_quantile, lower = min, upper =  max)[1] + safety
 
   return(list("D_min" = ifelse(is.na(D_min), -100, D_min),
-              "D_max" = ifelse(is.na(D_max), -100, D_max)))
+              "D_max" = ifelse(is.na(D_max), 100, D_max)))
 }
