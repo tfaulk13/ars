@@ -179,7 +179,7 @@ test_that("ars works for beta distribution with a given domain", {
 test_that("ars for beta distribution without a given domain asks the user to input a compact domain", {
   n <- 1000
 
-  expect_error(ars(n, function(x) dbeta(x, shape1 = 1, shape2 = 2)), "The density integrates to 0 because of the 'integrate' function behavior on a large interval for a condensed function.\n                 Give a small interval as input to the ars function and try again.")
+  expect_error(ars(n, function(x) dbeta(x, shape1 = 1, shape2 = 2)))
 })
 
 # Test 10: unifom distribution with wrong starting points returns error

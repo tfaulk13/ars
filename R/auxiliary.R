@@ -188,22 +188,25 @@ sample_x_star <- function(s_function, z_pts, s_integrals) {
 # Outputs:
 # A list containing two elements, the minimum of the domain, and its maximum.
 get_support_limit <- function (f) {
-  min <- -1E3
-  max <- 1E3
+  min <- -2E2
+  max <- 2E2
   lower_quantile <- log(1E-6)
   upper_quantile <- log(1 - 1E-6)
+
+  norm <- integrate(f, lower = min, upper = max)$value
+  if (norm == 0) {
+    stop("The density integrates to 0 because of the 'integrate' function behavior on a large interval for a condensed function.
+         Give a small interval as input to the ars function and try again.")
+  }
+
   cdf <- function(x) {
-    norm <- integrate(f, lower = min, upper = max)$value
-    if (norm == 0) {
-      stop("The density integrates to 0 because of the 'integrate' function behavior on a large interval for a condensed function.
-             Give a small interval as input to the ars function and try again.")
-    }
     res <- vector(length = length(x))
     for (i in seq(1, length(x))) {
       res[i] <- log(integrate(f, lower = min, upper = x[i])$value) - log(norm)
     }
     return(res)
   }
+
   safety <- 10
   D_min <- rootSolve::uniroot.all(f = function(x) cdf(x) - lower_quantile, lower = min, upper =  max)[1] - safety
   D_max <- rootSolve::uniroot.all(f = function(x) cdf(x) - upper_quantile, lower = min, upper =  max)[1] + safety
