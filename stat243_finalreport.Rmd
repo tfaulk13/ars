@@ -1,0 +1,46 @@
+---
+title: "Stat 243 Final Project Report"
+author: "Hatim Ezbakhe, Todd Faulkenberry, Dodo Qian, Naomi Wilcox"
+date: "12/12/2018"
+output: pdf_document
+---
+
+**Functions/package Approach:** 
+Our adaptive rejection sampler, 'ars', is a function that takes the number of samples desired (n), an input function (f), the function's derivative (dfunc), and a minimum (D_min) and maximum (D_max) value for the bounds, and outputs a sample of points from that distribution. The benefit of adaptive rejection sampling -- in our case, for log-concave distributions -- is that it reduces the number of evaluations that must occur. By assuming log-concavity for any input function, the function does not need to update new envelope and squeeze functions for every iteration. ARS is particularly useful in Gibbs Sampling, where calculations are complicated but usually log-concave.  
+
+*Starting points:* We wanted our function to allow for flexibility at the user's end and be simple to use. Although the user can provide starting points if they desire, making sure that more than two are given, we decided to make it optional so that the ars function can be used as easily as possible, by only providing the density function and the number of samples required. Here, we created a function that finds three starting values ${x_{1}, x_{2}, x_{3}}$. The function optimizes these points so that they fall on opposite sides of the function if possible. We consider two cases here: first if the curve in the domain contains the global maximum point, the function outputs three x values (the max, one point to the left of max, one point to the right of max). This makes sure that we at least have one point with $h'(x_{1}) > 0$, and one point with $h'(x_{k}) < 0$. To avoid forming a large space at the top of the curve, we include the maximum point to bound the upper hull. The second case is if the global maximum is not in the domain range (function is monotonic increasing/decreasing). Here, we just use the domain endpoints (D_min and D_max) and their middle point to form the three starting points.  Finally, the function returns X_init, a vector with the three chosen starting points: 'left_pt', 'max', and 'right_pt'. 
+
+*Intercept of tangent lines:* After three starting points have been selected, we then use a helper function to calculate the intersection of the tangent lines of the three x points. It takes as inputs: the function provided by the user, the derivative of the function, and the $x_{k}$ starting points. It outputs the intercepts of the tangent lines. This is a vectorized function to calculate the tangent line for each x value by using its coordinate and gradient. We also included a check to verify that the length of the points is the same as the length of 1 + that of the intercept line.   
+
+*Upper and lower bounds:*  
+We then wrote sub-functions to calculate the following:     
+1. $u_{k}(x)$, the piecewise linear upper bound formed from the tangents to h(x) at each point in $T_{k}$,   
+2. $s_{k}(x)$, and   
+3. $l_{k}(x)$, the piecewise linear lower bound formed from the chords between adjacent points in $T_{k}$  
+
+The upper bound was calculated by another sub-function, 'get_upper'. It takes as inputs: the abscissa of the function (T_), the intercepts of the tangent line (z_pts), a function provided by the user (func), and the derivative of that function (dfunc). It outputs the upper bound function. More specifically, it can take in an x value and output its corresponding y value on the upper hull formed by the tangent lines. It first locates which part of the piecewise linear upper hull x will belong to by utilizing the intersection points found before, and then calculates the y values by using the corresponding tangent line. 
+
+The lower bound was calculated through the function 'get_lower'. It takes as inputs: the abscissa of the function (T_), a function provided by the user (func), and the derivative of the function (dfunc). It outputs the lower bound. It connects the intersection points to form a lower hull. 
+
+*Sampling:* Once the upper hull is defined, we also define the piecewise exponential distribution s from which we sample a value x\*. To sample that value, we first choose the interval in which we are sampling from at random, using the interval's integral as its distribution, and then we sample from that interval. To do so, we define the cdf of s on said interval, and solve the equation cdf(x*) = runif(1). 
+
+*Squeezing Tests:* Once x\* is sampled, we need to decide if we accept this sample with no need to update our upper/lower/s functions. If we accept it, we need to update our functions by adding x* to the sampling points; if we reject it, we update our functions. We included two squeezing tests. 
+
+*Updating function:* The last step in our adaptive rejection sampler is an updating function that updates the functions as needed according to the squeezing test results. It takes as inputs: T_, z_pts, func, dfunc, D_min and D_max values. It outputs an updated upper bound, lower bound, and new starting points for the next iteration of the function. This is the "adaptive" part of the function. If a point is added to the final sample, we update the parameters by including this point to the abscissae.
+
+*While loop:* We repeat the process described above as long as we haven't gathered the number of samples the user required. 
+
+*Helper functions:* Get_support_limit: This is a function that comes up with the domain limits when the user did not input them. To do so, we defined the cdf of the density given as input by the user, and found D_min and D_max so that 99.999999% of the mass is between those two points. 
+
+**Testing**
+The tests directory of our package contains 10 tests using the testthat library, and these are split into four "contexts" or categories. Tests 1 and 1.5 are testing the auxiliary functions and verify that the function 'find_tangent_intercept' is working properly. Specifically, Test 1 checks that the tangent lines intercept at zero when the user inputs the quadratic function. Test 1.5 is a check on get_support_limit. It verifies that the function gives a domain containing the mass of the distribution for different input distributions (e.g. normal, exponential, uniform, beta, and gamma). 
+
+The second context (Tests 2-7) tests that the overall ars function works for various input distributions (e.g. logistic, exponential, normal and uniform) with varying levels of precision. These tests also check that ars works whether or not the user specifies an appropriate domain or not (Tests 2, 3, and 6). Test 5 checks that ars works for a peaked normal distribution (a normal distribution with low variance). Tests 7 and 8 check that the function works with appropriate starting points as defined by the user, and that inappropriate starting point choices return an informative error. The third context (Test 9) checks for log concavity, and throws an error when the input function is not log-concave. Finally, the last context tests that incorrect inputs to the overall ars() function give an error. Our function's inputs are the following:   
+
+```{r, eval=FALSE}
+ars(n, f, dfunc, D_min, D_max, verbose = FALSE)  
+```
+
+**Project Contributions**
+Dodo and Hatim jointly wrote, debugged, and edited the function. Todd tidied the function into an R package, 'ars', using $Roxygen2$ and wrote/organized the package's help file/manual, as well as comments for the R documentation. Naomi created a testthat template, and wrote the final project report (Dodo and Todd also edited the final report). 
+

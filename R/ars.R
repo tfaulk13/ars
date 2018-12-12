@@ -31,6 +31,8 @@
 #' @references
 #' Gilks, W., & Wild, P. (1992). Adaptive Rejection Sampling for Gibbs Sampling. Journal of the Royal Statistical Society.
 #'
+#' @export
+#'
 ars <- function(n, f, starting_points, dfunc, interval) {
 
   if (missing(n))
@@ -41,7 +43,7 @@ ars <- function(n, f, starting_points, dfunc, interval) {
   log_f <- function(x) log(f(x))
 
   if (missing(dfunc)) {
-    dfunc <- function(x) fderiv(f, x)/(f(x) + .Machine$double.eps)
+    dfunc <- function(x) pracma::fderiv(f, x) / (f(x) + .Machine$double.eps)
   }
 
   # Restrict the density to a smaller interval containing the overall information of the density.
