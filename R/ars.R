@@ -21,88 +21,112 @@
 #'
 #' @examples
 #' # testing on normal distribution
-#' h = function(y) {
-#' return(-log(2 * pi * sigma ^ 2) / 2 - (y - mu) ^ 2 / (2 * sigma ^ 2))
-#' }
-#'
-#' # derivative of h
-#' dh = function(y){
-#'   return(- (y - mu)/sigma^2)
-#' }
-#'
-#' res_samples <- ars(n = 1000, f = h, dfunc = dh, D_min = -10, D_max = 30)
+#' res_samples <- ars(n = 1000, f = dnorm)
 #'
 #'
 #' # Check variance and mean
 #' mean(res_samples)
 #' var(res_samples)
 #'
-ars <- function(n, f, dfunc, D_min, D_max, verbose = FALSE) {
-  ## Need to work on this. When D_min or D_max = +- Inf problems occur.
-  if (D_min == -Inf) {
-    D_min = -10^8
+ars <- function(n, f, starting_points, dfunc, interval) {
+
+  if (missing(n))
+    stop("Please provide the number of samples 'n' desired.")
+  if (!is.function(f))
+    stop("Please provide an R function as input for 'f'.")
+
+  log_f <- function(x) log(f(x))
+
+  if (missing(dfunc)) {
+    dfunc <- function(x) fderiv(f, x)/(f(x) + .Machine$double.eps)
   }
-  if (D_max == Inf) {
-    D_max = 10^8
+
+  #Restrict the density to a smaller interval containing the overall information of the density.
+  if (missing(interval)) {
+    support_limits <- set_support_limit(f)
+    D_min <- support_limits$D_min
+    D_max <- support_limits$D_max
+  } else {
+    assertthat::are_equal(length(interval), 2)
+    testthat::expect_type(interval, "double")
+    D_min <- interval[1]
+    D_max <- interval[2]
+    if (log_f(D_min) == -Inf || log_f(D_max) == -Inf) {
+      stop("Pleasee provide a more compact interval.")
+    }
   }
+
+
+
+
+
+  # Restrict the density to a smaller interval containing the overall information of the density.
+  # if (missing(interval)) {
+  #   support_limits <- set_support_limit(log_f, dfunc, D_min = -1E8, D_max = 1E8)
+  #   D_min <- support_limits$D_min
+  #   D_max <- support_limits$D_max
+  # } else {
+  #   assertthat::are_equal(length(interval), 2)
+  #   testthat::expect_type(interval, "double")
+  #   D_min <- interval[1]
+  #   D_max <- interval[2]
+  #   if (log_f(D_min) == -Inf || log_f(D_max) == -Inf) {
+  #     stop("Pleasee provide a more compact interval.")
+  #   }
+  # }
+
 
   iteration <- 0
   samples <- c()
-  T_current <- find_init_points(f, dfunc, D_min, D_max)
 
-  # tangent intersections points.
-  z_points <- sort(c(D_min, find_tangent_intercept(f, dfunc, T_current), D_max))
+  # Come up with starting points if not given.
+  if (missing(starting_points)) {
+    T_current <- find_init_points(f = log_f, dfunc = dfunc, D_min = D_min, D_max = D_max)
+  } else {
+    if (!is.numeric(starting_points))
+      stop("The 'starting_points' input should be a vector of abscissae.")
+    if (length(starting_points) < 2)
+      stop("The 'starting_points' input should contain at least 2 elements.")
+    T_current <- starting_points
+  }
 
-  helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = f, dfunc = dfunc, D_min = D_min, D_max = D_max)
+  # Find Tangent intersections points.
+  z_points <- sort(c(D_min, find_tangent_intercept(log_f, dfunc, T_current), D_max))
+
+  # Define the upper and lower envelopes, and the sampling function.
+  helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = log_f, dfunc = dfunc, D_min = D_min, D_max = D_max)
   u_current <- helper_funcs$upper
   s_current <- helper_funcs$s
   l_current <- helper_funcs$lower
-
+  integrals_s <- helper_funcs$s_integrals
 
   while (length(samples) <= n) {
-    # cat("T: ", T_current, "\n")
-    # cat("samples: ", samples, "\n")
-    integrals_s <- sapply(X = seq(1, length(z_points) -1), FUN = function(i) integrate(s_current, lower = z_points[i], upper = z_points[i + 1])$value)
-    idx <- sample(seq(1, length(z_points) -1), size = 1, prob = integrals_s)
+    x_star <- sample_x_star(s_function = s_current, s_integrals = integrals_s, z_pts = z_points)
 
-    unnormalized_cdf_s <- function(x) {
-      if (x <= z_points[idx]) {
-        return(0)
-      } else if (x >= z_points[idx + 1]) {
-        return(integrals_s[idx])
-      } else {
-        integrate(s_current, lower = z_points[idx], upper = x)$value
-      }
-    }
-
-    quantile <- runif(1, min = 0, max = integrals_s[idx])
-    x_star <- uniroot(f = function(x) unnormalized_cdf_s(x) - quantile, interval = c(z_points[idx], z_points[idx + 1]))$root # sample from s_current
-
-    assertthat::are_equal(x_star <= z_points[idx + 1] && x_star >= z_points[idx], TRUE)
     w <- runif(1)
 
     ## 1st squeezing test.
-    if ( w <= exp(l_current(x_star) - u_current(x_star)) ) {
+    diff_upper_lower <- u_current(x_star) - l_current(x_star)
+    if (diff_upper_lower < -1E-5) stop("Function is not log concave. Adaptive rejection sampling won't give a proper sample for this distribution.")
+    if ( w <= exp(-diff_upper_lower) ) {
       samples <- c(samples, x_star)
-      # cat("x_star accepted at 1st test. Samples: ", samples, "\n")
     } else {
-      if (w <= exp(f(x_star) - u_current(x_star))) {
-        # if (verbose == TRUE) {
-        #   cat("The point ", x_star, " has been added to the abscissae points at iteration ", iteration, "\n")
-        # }
+      diff_upper_f <- u_current(x_star) - log_f(x_star)
+      if(diff_upper_f < -1E-5) stop("Function is not log concave. Adaptive rejection sampling won't give a proper sample for this distribution.")
+      if (w <= exp(-diff_upper_f)) {
         samples <- c(samples, x_star)
-        #cat("x_star accepted at 2nd test. Samples: ", samples, "\n")
       }
 
-      # Update step
+      # Update step.
       T_current <- sort(c(T_current, x_star))
       iteration <- iteration + 1
 
-      z_points <- sort(c(D_min, find_tangent_intercept(f, dfunc, T_current), D_max))
-      helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = f, dfunc = dfunc, D_min = D_min, D_max = D_max)
+      z_points <- (sort(c(D_min, find_tangent_intercept(log_f, dfunc, T_current), D_max)))
+      helper_funcs <- get_updated_functions(T_ = T_current, z_pts = z_points, func = log_f, dfunc = dfunc, D_min = D_min, D_max = D_max)
       u_current <- helper_funcs$upper
       s_current <- helper_funcs$s
       l_current <- helper_funcs$lower
+      integrals_s <- helper_funcs$s_integrals
     }
   }
 
